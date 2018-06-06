@@ -2,6 +2,7 @@ package com.github.audunhalland.parceq;
 
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
+import io.vavr.collection.Stream;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.Objects;
@@ -204,9 +205,9 @@ public class Parser {
   // Pratt parser
   static class TopDownOperatorPrecedenceParser {
     private Token head;
-    private List<Token> tail;
+    private Stream<Token> tail;
 
-    public TopDownOperatorPrecedenceParser(List<Token> tokens) {
+    public TopDownOperatorPrecedenceParser(Stream<Token> tokens) {
       this.head = tokens.head();
       this.tail = tokens.tail();
     }
@@ -248,7 +249,7 @@ public class Parser {
             return parsePrefixArg()
                 .map(Expression::not);
           case LEFT_PAREN:
-            // FIXMRE:
+            // FIXME:
             return null;
           default:
             return Option.none();
@@ -308,7 +309,7 @@ public class Parser {
     }
   }
 
-  public Option<Expression> parse(List<Token> tokens) {
+  public Option<Expression> parse(Stream<Token> tokens) {
     final TopDownOperatorPrecedenceParser parser =
         new TopDownOperatorPrecedenceParser(tokens);
 

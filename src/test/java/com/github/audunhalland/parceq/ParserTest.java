@@ -7,6 +7,7 @@ import com.github.audunhalland.parceq.Parser.Expression;
 import com.github.audunhalland.parceq.Parser.Operator;
 import com.github.audunhalland.parceq.Token.Type;
 import io.vavr.collection.List;
+import io.vavr.collection.Stream;
 import org.junit.Test;
 
 public class ParserTest {
@@ -19,7 +20,7 @@ public class ParserTest {
   }
 
   private static Expression parse(Token ... tokens) {
-    return new Parser().parse(List.of(tokens)).get();
+    return new Parser().parse(Stream.of(tokens)).get();
   }
 
   private static Expression phrase(String phrase) {
