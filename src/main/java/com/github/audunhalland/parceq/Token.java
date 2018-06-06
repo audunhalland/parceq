@@ -20,14 +20,10 @@ public class Token {
 
   private final Type type;
   private final String value;
-  private final int offset;
-  private final int length;
 
-  Token(Type type, String value, int offset, int length) {
+  Token(Type type, String value) {
     this.type = type;
     this.value = value;
-    this.offset = offset;
-    this.length = length;
   }
 
   public Type getType() {
@@ -36,14 +32,6 @@ public class Token {
 
   public String getValue() {
     return value;
-  }
-
-  public int getOffset() {
-    return offset;
-  }
-
-  public int getLength() {
-    return length;
   }
 
   @Override

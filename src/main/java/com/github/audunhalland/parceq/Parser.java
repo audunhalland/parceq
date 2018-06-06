@@ -310,8 +310,7 @@ public class Parser {
 
   public Option<Expression> parse(List<Token> tokens) {
     final TopDownOperatorPrecedenceParser parser =
-        new TopDownOperatorPrecedenceParser(
-            tokens.append(new Token(Token.Type.EOF, "", 0, 0)));
+        new TopDownOperatorPrecedenceParser(tokens);
 
     return parser.parseExpression(0);
   }

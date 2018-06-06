@@ -1,50 +1,35 @@
 package com.github.audunhalland.parceq;
 
-import io.vavr.collection.List;
-import io.vavr.control.Option;
+import com.github.audunhalland.parceq.Token.Type;
+import io.vavr.collection.Stream;
+import io.vavr.control.Try;
+import java.io.IOException;
+import java.io.Reader;
 
 public class Lexer {
 
-  public List<Token> tokenize(String query) {
-    final int length = query.length();
-    List<Token> tokens = List.empty();
-
-    int offset = 0;
-
-    while (true) {
-      final Option<Token> optNext = getNextToken(query, offset, length);
-      if (optNext.isEmpty()) {
-        break;
-      }
-
-      final Token next = optNext.get();
-      tokens = tokens.append(next);
-      offset += next.getLength();
-    }
-
-    return tokens;
-  }
-
-  private Option<Token> getNextToken(String query, int startOffset, int length) {
-    if (startOffset >= length) {
-      return Option.none();
-    }
-
+  public Stream<Try<Token>> tokenStream(Reader reader) {
     final StringBuilder builder = new StringBuilder();
 
     boolean escaped = false;
-    int offset = startOffset;
 
-    while (offset < length) {
-      final int codepoint = query.codePointAt(offset);
-      offset += Character.charCount(codepoint);
+    while (true) {
+      final int codepoint;
+      try {
+        codepoint = reader.read();
+      } catch (IOException e) {
+        return Stream.of(Try.failure(e));
+      }
 
       switch (codepoint) {
+        case -1:
+          // white space only - not considered a token
+          return eof();
         case '\\':
           if (escaped) {
             builder.appendCodePoint('\\');
             builder.appendCodePoint('\\');
-            return readUnquotedPhrase(query, offset, length, startOffset, builder);
+            return unquoted(builder, reader);
           }
           escaped = true;
           break;
@@ -54,16 +39,16 @@ public class Lexer {
         case '+':
           if (escaped) {
             builder.appendCodePoint(codepoint);
-            return readUnquotedPhrase(query, offset, length, startOffset, builder);
+            return unquoted(builder, reader);
           } else {
-            return createSingleCharToken(codepoint, startOffset, offset - startOffset);
+            return singleChar(codepoint, reader);
           }
         case '"':
           if (escaped) {
             builder.appendCodePoint(codepoint);
-            return readUnquotedPhrase(query, offset, length, startOffset, builder);
+            return unquoted(builder, reader);
           } else {
-            return readQuotedPhrase(query, offset, length, startOffset);
+            return quoted(reader);
           }
         case ' ':
           break;
@@ -72,38 +57,59 @@ public class Lexer {
             builder.appendCodePoint('\\');
           }
           builder.appendCodePoint(codepoint);
-          return readUnquotedPhrase(query, offset, length, startOffset, builder);
+          return unquoted(builder, reader);
       }
     }
-
-    // white space only - not considered a token
-    return Option.none();
   }
 
-  private Option<Token> createSingleCharToken(int codepoint, int startOffset, int length) {
+  private Stream<Try<Token>> yield(Try<Token> token, Reader reader) {
+    return Stream.cons(token, () -> tokenStream(reader));
+  }
+
+  private Stream<Try<Token>> yield(Token token, Reader reader) {
+    return yield(Try.success(token), reader);
+  }
+
+  private Stream<Try<Token>> eof() {
+    return Stream.of(Try.success(new Token(Type.EOF, "")));
+  }
+
+  private Stream<Try<Token>> eof(Try<Token> token) {
+    return Stream.of(token, Try.success(new Token(Type.EOF, "")));
+  }
+
+  private Stream<Try<Token>> singleChar(int codepoint, Reader reader) {
     switch (codepoint) {
       case '(':
-        return Option.of(new Token(Token.Type.LEFT_PAREN, "(", startOffset, length));
+        return yield(new Token(Token.Type.LEFT_PAREN, "("), reader);
       case ')':
-        return Option.of(new Token(Token.Type.RIGHT_PAREN, ")", startOffset, length));
+        return yield(new Token(Token.Type.RIGHT_PAREN, ")"), reader);
       case '-':
-        return Option.of(new Token(Token.Type.PREFIX_ANDNOT, "-", startOffset, length));
+        return yield(new Token(Token.Type.PREFIX_ANDNOT, "-"), reader);
       case '+':
-        return Option.of(new Token(Token.Type.PREFIX_AND, "+", startOffset, length));
+        return yield(new Token(Token.Type.PREFIX_AND, "+"), reader);
       default:
-        return Option.none();
+        return eof();
     }
   }
 
-  private Option<Token> readUnquotedPhrase(String query, int offset, int length, int tokenStart,
-      StringBuilder builder) {
+  private Stream<Try<Token>> unquoted(StringBuilder builder, Reader reader) {
     boolean escaped = false;
 
-    while (offset < length) {
-      final int codepoint = query.codePointAt(offset);
-      offset += Character.charCount(codepoint);
+    while (true) {
+      final int codepoint;
+      try {
+        codepoint = reader.read();
+      } catch (IOException e) {
+        return Stream.of(Try.failure(e));
+      }
 
       switch (codepoint) {
+        case -1:
+          if (escaped) {
+            builder.appendCodePoint('\\');
+          }
+          return eof(unquoted(builder.toString()));
         case '\\':
           if (escaped) {
             builder.appendCodePoint('\\');
@@ -112,13 +118,19 @@ public class Lexer {
           break;
         case '(':
         case ')':
+          if (escaped) {
+            builder.appendCodePoint(codepoint);
+            escaped = false;
+          } else {
+            return Stream.cons(unquoted(builder.toString()),
+                () -> singleChar(codepoint, reader));
+          }
         case ' ':
           if (escaped) {
             builder.appendCodePoint(codepoint);
             escaped = false;
           } else {
-            return Option.of(
-                createUnquotedToken(builder.toString(), tokenStart, offset - tokenStart - 1));
+            return yield(unquoted(builder.toString()), reader);
           }
           break;
         default:
@@ -130,36 +142,41 @@ public class Lexer {
           break;
       }
     }
-
-    if (escaped) {
-      builder.appendCodePoint('\\');
-    }
-
-    return Option.of(
-        createUnquotedToken(builder.toString(), tokenStart, offset - tokenStart));
   }
 
-  private Token createUnquotedToken(String token, int offset, int length) {
-    switch (token) {
+  private Try<Token> unquoted(String word) {
+    switch (word) {
       case "AND":
       case "&&":
-        return new Token(Token.Type.INFIX_AND, token, offset, length);
+        return Try.success(new Token(Token.Type.INFIX_AND, word));
       case "OR":
       case "||":
-        return new Token(Token.Type.INFIX_OR, token, offset, length);
+        return Try.success(new Token(Token.Type.INFIX_OR, word));
       default:
-        return new Token(Token.Type.PHRASE, token, offset, length);
+        return Try.success(new Token(Token.Type.PHRASE, word));
     }
   }
 
-  private Option<Token> readQuotedPhrase(String query, int offset, int length, int tokenStart) {
+  private Stream<Try<Token>> quoted(Reader reader) {
     final StringBuilder builder = new StringBuilder();
     boolean escaped = false;
-    while (offset < length) {
-      final int codepoint = query.codePointAt(offset);
-      offset += Character.charCount(codepoint);
+    while (true) {
+      final int codepoint;
+      try {
+        codepoint = reader.read();
+      } catch (IOException e) {
+        return Stream.of(Try.failure(e));
+      }
 
       switch (codepoint) {
+        case -1:
+          // Tolerate missing closing parenthesis at end of string
+          if (builder.length() > 0) {
+            return eof(Try.success(new Token(Type.PHRASE, builder.toString())));
+          } else {
+            // EOF following an opening quote - does not count as phrase
+            return eof();
+          }
         case '\\':
           if (escaped) {
             builder.appendCodePoint('\\');
@@ -168,8 +185,7 @@ public class Lexer {
           break;
         case '"':
           if (!escaped) {
-            return Option.of(
-                new Token(Token.Type.PHRASE, builder.toString(), tokenStart, offset - tokenStart));
+            return yield(new Token(Type.PHRASE, builder.toString()), reader);
           }
           escaped = false;
           // fall through
@@ -182,15 +198,6 @@ public class Lexer {
           builder.appendCodePoint(codepoint);
           break;
       }
-    }
-
-    // Tolerate missing closing parenthesis at end of string
-    if (builder.length() > 0) {
-      return Option.of(
-          new Token(Token.Type.PHRASE, builder.toString(), tokenStart, offset - tokenStart));
-    } else {
-      // EOF following an opening quote - does not count as phrase
-      return Option.none();
     }
   }
 }

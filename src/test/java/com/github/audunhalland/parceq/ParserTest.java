@@ -10,11 +10,12 @@ import io.vavr.collection.List;
 import org.junit.Test;
 
 public class ParserTest {
-  private static final Token PREFIX_AND = new Token(Type.PREFIX_AND, "+", 0, 0);
-  private static final Token PREFIX_ANDNOT = new Token(Type.PREFIX_ANDNOT, "-", 0, 0);
+  private static final Token PREFIX_AND = new Token(Type.PREFIX_AND, "+");
+  private static final Token PREFIX_ANDNOT = new Token(Type.PREFIX_ANDNOT, "-");
+  private static final Token EOF = new Token(Type.EOF, "");
 
   private static Token token(String phrase) {
-    return new Token(Token.Type.PHRASE, phrase, 0, 0);
+    return new Token(Token.Type.PHRASE, phrase);
   }
 
   private static Expression parse(Token ... tokens) {
@@ -40,14 +41,14 @@ public class ParserTest {
   @Test
   public void parses_single_phrase() {
     assertThat(parse(
-        token("foo")),
+        token("foo"), EOF),
         equalTo(phrase("foo")));
   }
 
   @Test
   public void parses_two_phrases() {
     assertThat(parse(
-        token("foo"), token("bar")),
+        token("foo"), token("bar"), EOF),
         equalTo(
             or(
                 phrase("foo"),
@@ -57,7 +58,7 @@ public class ParserTest {
   @Test
   public void parses_prefix_and_operator() {
     assertThat(parse(
-        token("foo"), token("bar"), PREFIX_AND, token("baz")),
+        token("foo"), token("bar"), PREFIX_AND, token("baz"), EOF),
         equalTo(
             and(
                 phrase("baz"),
@@ -69,7 +70,7 @@ public class ParserTest {
   @Test
   public void parses_prefix_andnot() {
     assertThat(parse(
-        token("foo"), PREFIX_ANDNOT, token("bar"), token("baz")),
+        token("foo"), PREFIX_ANDNOT, token("bar"), token("baz"), EOF),
         equalTo(
             and(
                 not(phrase("bar")),
@@ -81,7 +82,7 @@ public class ParserTest {
   @Test
   public void parses_prefix_andnot_initially() {
     assertThat(parse(
-        PREFIX_ANDNOT, token("foo"), token("bar"), token("baz")),
+        PREFIX_ANDNOT, token("foo"), token("bar"), token("baz"), EOF),
         equalTo(
             and(
                 not(phrase("foo")),
@@ -93,7 +94,7 @@ public class ParserTest {
   @Test
   public void parses_multiple_prefix_operators() {
     assertThat(parse(
-        PREFIX_ANDNOT, token("foo"), token("bar"), PREFIX_AND, token("baz")),
+        PREFIX_ANDNOT, token("foo"), token("bar"), PREFIX_AND, token("baz"), EOF),
         equalTo(
             and(
                 phrase("baz"),
@@ -104,13 +105,13 @@ public class ParserTest {
   @Test
   public void parses_meaninglessly_successive_prefix_operators_leniently() {
     assertThat(parse(
-        token("foo"), PREFIX_AND, PREFIX_ANDNOT, token("bar")),
+        token("foo"), PREFIX_AND, PREFIX_ANDNOT, token("bar"), EOF),
         equalTo(
             and(
                 not(phrase("bar")),
                 or(phrase("foo")))));
     assertThat(parse(
-        token("foo"), PREFIX_ANDNOT, PREFIX_AND, token("bar"), token("baz")),
+        token("foo"), PREFIX_ANDNOT, PREFIX_AND, token("bar"), token("baz"), EOF),
         equalTo(
             and(
                 not(phrase("bar")),
@@ -118,7 +119,7 @@ public class ParserTest {
                     phrase("foo"),
                     phrase("baz")))));
     assertThat("carelessly catenating prefix ANDNOTs equal out, but including excess PREFIX_ANDs has not effect",
-        parse(PREFIX_AND, PREFIX_ANDNOT, PREFIX_AND, PREFIX_ANDNOT, PREFIX_ANDNOT, token("bar")),
+        parse(PREFIX_AND, PREFIX_ANDNOT, PREFIX_AND, PREFIX_ANDNOT, PREFIX_ANDNOT, token("bar"), EOF),
         equalTo(and(not(phrase("bar")))));
   }
 }
