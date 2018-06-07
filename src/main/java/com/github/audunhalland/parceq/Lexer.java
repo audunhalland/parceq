@@ -125,6 +125,7 @@ public class Lexer {
             return Stream.cons(unquoted(builder.toString()),
                 () -> singleChar(codepoint, reader));
           }
+          break;
         case ' ':
           if (escaped) {
             builder.appendCodePoint(codepoint);
