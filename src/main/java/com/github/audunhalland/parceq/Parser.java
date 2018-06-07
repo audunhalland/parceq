@@ -1,5 +1,6 @@
 package com.github.audunhalland.parceq;
 
+import com.github.audunhalland.parceq.Token.Type;
 import io.vavr.Tuple2;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
@@ -100,6 +101,14 @@ public class Parser {
       switch (token.getType()) {
         case PHRASE:
           return left.or(Expression.of(token.getValue()));
+        case INFIX_AND:
+          return parseExpression(Type.INFIX_AND.leftBindingPower)
+              .map(left::and)
+              .getOrElse(left);
+        case INFIX_OR:
+          return parseExpression(Type.INFIX_OR.leftBindingPower)
+              .map(left::or)
+              .getOrElse(left);
         case PREFIX_AND:
           return parsePrefixArgAndRight(Token.Type.PREFIX_AND.leftBindingPower)
               .map2(optRight -> optRight.map(left::extend).getOrElse(left))

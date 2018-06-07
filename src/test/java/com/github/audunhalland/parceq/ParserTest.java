@@ -12,6 +12,8 @@ import org.junit.Test;
 public class ParserTest {
   private static final Token PREFIX_AND = new Token(Type.PREFIX_AND, "+");
   private static final Token PREFIX_ANDNOT = new Token(Type.PREFIX_ANDNOT, "-");
+  private static final Token INFIX_AND = new Token(Type.INFIX_AND, "&&");
+  private static final Token INFIX_OR = new Token(Type.INFIX_OR, "||");
   private static final Token EOF = new Token(Type.EOF, "");
 
   private static Token token(String phrase) {
@@ -121,5 +123,40 @@ public class ParserTest {
     assertThat("carelessly catenating prefix ANDNOTs equal out, but including excess PREFIX_ANDs has not effect",
         parse(PREFIX_AND, PREFIX_ANDNOT, PREFIX_AND, PREFIX_ANDNOT, PREFIX_ANDNOT, token("bar"), EOF),
         equalTo(and(not(phrase("bar")))));
+  }
+
+  @Test
+  public void infix_and_has_lower_precedence() {
+    assertThat(parse(
+        token("foo"), INFIX_AND, token("bar"), token("baz"), EOF),
+        equalTo(
+            and(
+                phrase("foo"),
+                or(
+                    phrase("bar"),
+                    phrase("baz")))));
+  }
+
+  @Test
+  public void infix_or_has_no_effect_in_implicit_ors() {
+    assertThat(parse(
+        token("foo"), INFIX_OR, token("bar"), token("baz"), EOF),
+        equalTo(
+            or(phrase("foo"), phrase("bar"), phrase("baz"))));
+  }
+
+  @Test
+  public void infix_or_has_higher_precedence_than_and() {
+    assertThat(parse(
+        token("foo"), INFIX_OR, token("bar"), INFIX_AND, token("baz"), INFIX_OR, token("qux"), EOF),
+        equalTo(
+            and(
+                or(phrase("foo"), phrase("bar")),
+                or(phrase("baz"), phrase("qux")))));
+  }
+
+  @Test
+  public void parentheses_control_precedence() {
+
   }
 }
