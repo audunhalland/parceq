@@ -1,6 +1,5 @@
 package com.github.audunhalland.parceq;
 
-import com.github.audunhalland.parceq.Parser.Operator;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;

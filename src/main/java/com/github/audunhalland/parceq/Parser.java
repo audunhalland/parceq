@@ -7,13 +7,6 @@ import io.vavr.control.Option;
 
 public class Parser {
 
-  public enum Operator {
-    NOOP,
-    OR,
-    AND,
-    NOT,
-  }
-
   // Pratt parser
   static class TopDownOperatorPrecedenceParser {
     private Token head;

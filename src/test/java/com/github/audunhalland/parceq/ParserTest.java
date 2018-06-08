@@ -3,7 +3,6 @@ package com.github.audunhalland.parceq;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
 
-import com.github.audunhalland.parceq.Parser.Operator;
 import com.github.audunhalland.parceq.Token.Type;
 import io.vavr.collection.List;
 import io.vavr.collection.Stream;
