@@ -2,7 +2,7 @@ package com.github.audunhalland.parceq;
 
 public enum Operator {
   NOOP,
-  TERMS,
+  BOOST,
   OR,
   AND,
   NOT,

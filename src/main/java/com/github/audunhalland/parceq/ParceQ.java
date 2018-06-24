@@ -27,4 +27,8 @@ public class ParceQ {
   public Option<Expression> getExpression() {
     return expr;
   }
+
+  public ParceQ termShingles(int order, CharSequence separator) {
+    return null;
+  }
 }

@@ -84,14 +84,14 @@ public class Parser {
               .map2(optRight -> optRight.getOrElse(Expression.noop()))
               .apply((optArg, right) ->
                   optArg
-                      .map(arg -> arg.and(right.toAndArg()))
+                      .map(arg -> arg.and(right.wrap()))
                       .getOrElse(right));
         case PREFIX_ANDNOT:
           return parsePrefixArgAndRight(Token.Type.PREFIX_ANDNOT.leftBindingPower)
               .map2(optRight -> optRight.getOrElse(Expression.noop()))
               .apply((optArg, right) ->
                   optArg
-                      .map(arg -> arg.not().and(right.toAndArg()))
+                      .map(arg -> arg.not().and(right.wrap()))
                       .getOrElse(right));
         default:
           return Expression.noop();
@@ -115,14 +115,14 @@ public class Parser {
               .map2(optRight -> optRight.map(left::extend).getOrElse(left))
               .apply((optArg, rest) ->
                   optArg
-                      .map(arg -> arg.and(rest.toAndArg()))
+                      .map(arg -> arg.and(rest.wrap()))
                       .getOrElse(rest));
         case PREFIX_ANDNOT:
           return parsePrefixArgAndRight(Token.Type.PREFIX_ANDNOT.leftBindingPower)
               .map2(optRight -> optRight.map(left::extend).getOrElse(left))
               .apply((optArg, rest) ->
                   optArg
-                      .map(arg -> arg.not().and(rest.toAndArg()))
+                      .map(arg -> arg.not().and(rest.wrap()))
                       .getOrElse(rest));
         default:
           return left;
@@ -134,6 +134,7 @@ public class Parser {
     final TopDownOperatorPrecedenceParser parser =
         new TopDownOperatorPrecedenceParser(termAllocator, tokens);
 
-    return parser.parseExpression(0);
+    return parser.parseExpression(0)
+        .map(Expression::wrap);
   }
 }

@@ -48,18 +48,22 @@ public class ParserTest {
     return Expression.of(Operator.NOT, List.of(expression));
   }
 
+  private static Expression boost(Expression ... expressions) {
+    return Expression.of(Operator.BOOST, List.of(expressions));
+  }
+
   @Test
   public void parses_single_term() {
     assertThat(parse(
         token("foo"), EOF),
-        equalTo(termExpr(0, "foo")));
+        equalTo(boost(termExpr(0, "foo"))));
   }
 
   @Test
   public void parses_two_terms() {
     assertThat(parse(
         token("foo"), token("bar"), EOF),
-        equalTo(termsExpr(term(0, "foo"), term(1, "bar"))));
+        equalTo(boost(termsExpr(term(0, "foo"), term(1, "bar")))));
   }
 
   @Test
@@ -69,8 +73,9 @@ public class ParserTest {
         equalTo(
             and(
                 termExpr(2, "baz"),
-                termsExpr(
-                    term(0, "foo"), term(1, "bar")))));
+                boost(
+                    termsExpr(
+                        term(0, "foo"), term(1, "bar"))))));
   }
 
   @Test
@@ -80,7 +85,7 @@ public class ParserTest {
         equalTo(
             and(
                 not(termExpr(1, "bar")),
-                or(
+                boost(
                     termExpr(0, "foo"),
                     termExpr(2, "baz")))));
   }
@@ -92,7 +97,7 @@ public class ParserTest {
         equalTo(
             and(
                 not(termExpr(0, "foo")),
-                termsExpr(term(1, "bar"), term(2, "baz")))));
+                boost(termsExpr(term(1, "bar"), term(2, "baz"))))));
   }
 
   @Test
@@ -103,7 +108,7 @@ public class ParserTest {
             and(
                 termExpr(2, "baz"),
                 not(termExpr(0, "foo")),
-                or(termExpr(1, "bar")))));
+                boost(termExpr(1, "bar")))));
   }
 
   @Test
@@ -113,13 +118,13 @@ public class ParserTest {
         equalTo(
             and(
                 not(termExpr(1, "bar")),
-                or(termExpr(0, "foo")))));
+                boost(termExpr(0, "foo")))));
     assertThat(parse(
         token("foo"), PREFIX_ANDNOT, PREFIX_AND, token("bar"), token("baz"), EOF),
         equalTo(
             and(
                 not(termExpr(1, "bar")),
-                or(
+                boost(
                     termExpr(0, "foo"),
                     termExpr(2, "baz")))));
     assertThat("carelessly catenating prefix ANDNOTs equal out, but including excess PREFIX_ANDs has not effect",

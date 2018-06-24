@@ -4,11 +4,12 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class Expression {
-  private final Either<SubExpression, Term> value;
+  private final Either<SubExpression, List<Term>> value;
 
-  Expression(Either<SubExpression, Term> value) {
+  Expression(Either<SubExpression, List<Term>> value) {
     this.value = value;
   }
 
@@ -21,14 +22,18 @@ public class Expression {
   }
 
   public static Expression of(Term term) {
-    return new Expression(Either.right(term));
+    return new Expression(Either.right(List.of(term)));
+  }
+
+  public static Expression of(List<Term> terms) {
+    return new Expression(Either.right(terms));
   }
 
   public static Expression noop() {
     return of(new SubExpression(Operator.NOOP, List.empty()));
   }
 
-  public boolean isTerm() {
+  public boolean isTerms() {
     return value.isRight();
   }
 
@@ -52,19 +57,11 @@ public class Expression {
     return isCompound() && value.getLeft().operator == Operator.NOOP;
   }
 
-  public Expression toAndArg() {
-    if (isTerm()) {
-      return of(Operator.OR, List.of(this));
+  public Expression wrap() {
+    if (isTerms()) {
+      return of(Operator.BOOST, List.of(this));
     } else {
       return this;
-    }
-  }
-
-  public Option<List<Term>> termsOnly() {
-    if (isCompound()) {
-      return value.getLeft().termsOnly();
-    } else {
-      return Option.of(List.of(value.get()));
     }
   }
 
@@ -73,14 +70,11 @@ public class Expression {
       return of(term);
     }
 
-    final Option<List<Term>> thisTermsOnly = this.termsOnly();
-    if (thisTermsOnly.isDefined()) {
-      return Expression.of(Operator.TERMS,
-          thisTermsOnly.get()
-              .append(term)
-              .map(Expression::of));
+    if (isTerms()) {
+      return Expression.of(value.get().append(term));
+    } else {
+      return Expression.of(Operator.OR, List.of(this, Expression.of(term)));
     }
-    return Expression.of(Operator.OR, List.of(this, Expression.of(term)));
   }
 
   public Expression and(Expression other) {
@@ -92,9 +86,9 @@ public class Expression {
             value.getLeft().operands.appendAll(other.value.getLeft().operands));
       }
       return of(Operator.AND, value.getLeft().operands.append(other));
-    } else if (isTerm() && other.isAnd()) {
+    } else if (isTerms() && other.isAnd()) {
       return of(Operator.AND, List.of(of(value.get())).appendAll(other.value.getLeft().operands));
-    } else if (isAnd() && other.isTerm()) {
+    } else if (isAnd() && other.isTerms()) {
       return of(Operator.AND, value.getLeft().operands.append(of(other.value.get())));
     } else {
       return of(Operator.AND, List.of(this, other));
@@ -110,9 +104,9 @@ public class Expression {
             value.getLeft().operands.appendAll(other.value.getLeft().operands));
       }
       return of(Operator.OR, value.getLeft().operands.append(other));
-    } else if (isTerm() && other.isOr()) {
+    } else if (isTerms() && other.isOr()) {
       return of(Operator.OR, List.of(of(value.get())).appendAll(other.value.getLeft().operands));
-    } else if (isOr() && other.isTerm()) {
+    } else if (isOr() && other.isTerms()) {
       return of(Operator.OR, value.getLeft().operands.append(of(other.value.get())));
     } else {
       return of(Operator.OR, List.of(this, other));
@@ -142,8 +136,10 @@ public class Expression {
         default:
           return other;
       }
+    } else if (other.isTerms()) {
+      return of(Operator.BOOST, List.of(this, other));
     } else {
-      return this.or(other);
+      return or(other);
     }
   }
 
@@ -152,7 +148,11 @@ public class Expression {
     if (isCompound()) {
       return value.getLeft().toString();
     } else {
-      return value.get().getValue() + "@" + value.get().getId();
+      return "terms("
+          + value.get()
+          .map(term -> term.getValue() + "@" + term.getId())
+          .collect(Collectors.joining(", "))
+          + ")";
     }
   }
 
@@ -176,21 +176,6 @@ public class Expression {
       this.operator = operator;
       this.operands = operands
           .filter(expr -> !expr.isNoop());
-    }
-
-    Option<List<Term>> termsOnly() {
-      if (operator != Operator.TERMS) {
-        return Option.none();
-      }
-      List<Term> terms = List.empty();
-      for (Expression expr : operands) {
-        Option<List<Term>> exprTerms = expr.termsOnly();
-        if (!exprTerms.isDefined()) {
-          return Option.none();
-        }
-        terms = terms.appendAll(exprTerms.get());
-      }
-      return Option.of(terms);
     }
 
     @Override
