@@ -120,7 +120,9 @@ public class Expression {
   }
 
   public Expression not() {
-    if (isCompound()
+    if (isNoop()) {
+      return this;
+    } else if (isCompound()
         && value.getLeft().operator == Operator.NOT
         && value.getLeft().operands.size() == 1) {
       return value.getLeft().operands.get(0);
