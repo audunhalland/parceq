@@ -150,7 +150,7 @@ public class Expression {
     if (isCompound()) {
       return value.getLeft().toString();
     } else {
-      return value.get().getValue();
+      return value.get().getValue() + "@" + value.get().getId();
     }
   }
 

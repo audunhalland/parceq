@@ -6,13 +6,21 @@ import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 
 public class Parser {
+  private final TermAllocator termAllocator;
+
+  public Parser(TermAllocator termAllocator) {
+    this.termAllocator = termAllocator;
+  }
 
   // Pratt parser
   static class TopDownOperatorPrecedenceParser {
+    private final TermAllocator termAllocator;
     private Token head;
     private Stream<Token> tail;
 
-    public TopDownOperatorPrecedenceParser(Stream<Token> tokens) {
+    public TopDownOperatorPrecedenceParser(TermAllocator termAllocator,
+        Stream<Token> tokens) {
+      this.termAllocator = termAllocator;
       this.head = tokens.head();
       this.tail = tokens.tail();
     }
@@ -70,7 +78,7 @@ public class Parser {
     private Expression getNullDenotation(Token token) {
       switch (token.getType()) {
         case WORD:
-          return Expression.of(new Term(token.getValue()));
+          return Expression.of(termAllocator.createRootTerm(token.getValue()));
         case PREFIX_AND:
           return parsePrefixArgAndRight(Token.Type.PREFIX_AND.leftBindingPower)
               .map2(optRight -> optRight.getOrElse(Expression.noop()))
@@ -93,7 +101,7 @@ public class Parser {
     private Expression getLeftDenotation(Expression left, Token token) {
       switch (token.getType()) {
         case WORD:
-          return left.appendTerm(new Term(token.getValue()));
+          return left.appendTerm(termAllocator.createRootTerm(token.getValue()));
         case INFIX_AND:
           return parseExpression(Type.INFIX_AND.leftBindingPower)
               .map(left::and)
@@ -124,7 +132,7 @@ public class Parser {
 
   public Option<Expression> parse(Stream<Token> tokens) {
     final TopDownOperatorPrecedenceParser parser =
-        new TopDownOperatorPrecedenceParser(tokens);
+        new TopDownOperatorPrecedenceParser(termAllocator, tokens);
 
     return parser.parseExpression(0);
   }
