@@ -133,7 +133,7 @@ public class ParserTest {
   }
 
   @Test
-  public void infix_and_has_lower_precedence() {
+  public void infix_and_has_lower_precedence_and_no_boosting_of_and_arguments() {
     assertThat(parse(
         token("foo"), INFIX_AND, token("bar"), token("baz"), EOF),
         equalTo(
