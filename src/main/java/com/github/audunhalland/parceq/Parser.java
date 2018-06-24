@@ -46,7 +46,7 @@ public class Parser {
         final Token token = head;
         next();
         switch (token.getType()) {
-          case PHRASE:
+          case WORD:
             return Option.of(getNullDenotation(token));
           case PREFIX_AND:
             return parsePrefixArg();
@@ -69,8 +69,8 @@ public class Parser {
 
     private Expression getNullDenotation(Token token) {
       switch (token.getType()) {
-        case PHRASE:
-          return Expression.of(token.getValue());
+        case WORD:
+          return Expression.of(new Term(token.getValue()));
         case PREFIX_AND:
           return parsePrefixArgAndRight(Token.Type.PREFIX_AND.leftBindingPower)
               .map2(optRight -> optRight.getOrElse(Expression.noop()))
@@ -92,8 +92,8 @@ public class Parser {
 
     private Expression getLeftDenotation(Expression left, Token token) {
       switch (token.getType()) {
-        case PHRASE:
-          return left.or(Expression.of(token.getValue()));
+        case WORD:
+          return left.appendTerm(new Term(token.getValue()));
         case INFIX_AND:
           return parseExpression(Type.INFIX_AND.leftBindingPower)
               .map(left::and)

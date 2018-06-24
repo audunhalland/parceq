@@ -154,7 +154,7 @@ public class Lexer {
       case "||":
         return Try.success(new Token(Token.Type.INFIX_OR, word));
       default:
-        return Try.success(new Token(Token.Type.PHRASE, word));
+        return Try.success(new Token(Token.Type.WORD, word));
     }
   }
 
@@ -173,9 +173,9 @@ public class Lexer {
         case -1:
           // Tolerate missing closing parenthesis at end of string
           if (builder.length() > 0) {
-            return eof(Try.success(new Token(Type.PHRASE, builder.toString())));
+            return eof(Try.success(new Token(Type.WORD, builder.toString())));
           } else {
-            // EOF following an opening quote - does not count as phrase
+            // EOF following an opening quote - does not count as word
             return eof();
           }
         case '\\':
@@ -186,7 +186,7 @@ public class Lexer {
           break;
         case '"':
           if (!escaped) {
-            return yield(new Token(Type.PHRASE, builder.toString()), reader);
+            return yield(new Token(Type.WORD, builder.toString()), reader);
           }
           escaped = false;
           // fall through

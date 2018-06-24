@@ -2,7 +2,7 @@ package com.github.audunhalland.parceq;
 
 public class Token {
   public enum Type {
-    PHRASE(80),
+    WORD(80),
     LEFT_PAREN(0),
     RIGHT_PAREN(0),
     INFIX_AND(10),

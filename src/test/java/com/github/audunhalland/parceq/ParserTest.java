@@ -15,16 +15,22 @@ public class ParserTest {
   private static final Token INFIX_OR = new Token(Type.INFIX_OR, "||");
   private static final Token EOF = new Token(Type.EOF, "");
 
-  private static Token token(String phrase) {
-    return new Token(Token.Type.PHRASE, phrase);
+  private static Token token(String value) {
+    return new Token(Token.Type.WORD, value);
   }
 
   private static Expression parse(Token ... tokens) {
     return new Parser().parse(Stream.of(tokens)).get();
   }
 
-  private static Expression phrase(String phrase) {
-    return Expression.of(phrase);
+  private static Expression term(String value) {
+    return Expression.of(new Term(value));
+  }
+
+  private static Expression terms(String ... terms) {
+    return List.of(terms)
+        .foldLeft(Expression.noop(),
+            (expr, term) -> expr.appendTerm(new Term(term)));
   }
 
   private static Expression and(Expression ... expressions) {
@@ -40,20 +46,17 @@ public class ParserTest {
   }
 
   @Test
-  public void parses_single_phrase() {
+  public void parses_single_term() {
     assertThat(parse(
         token("foo"), EOF),
-        equalTo(phrase("foo")));
+        equalTo(term("foo")));
   }
 
   @Test
-  public void parses_two_phrases() {
+  public void parses_two_terms() {
     assertThat(parse(
         token("foo"), token("bar"), EOF),
-        equalTo(
-            or(
-                phrase("foo"),
-                phrase("bar"))));
+        equalTo(terms("foo", "bar")));
   }
 
   @Test
@@ -62,10 +65,8 @@ public class ParserTest {
         token("foo"), token("bar"), PREFIX_AND, token("baz"), EOF),
         equalTo(
             and(
-                phrase("baz"),
-                or(
-                    phrase("foo"),
-                    phrase("bar")))));
+                term("baz"),
+                terms("foo", "bar"))));
   }
 
   @Test
@@ -74,10 +75,10 @@ public class ParserTest {
         token("foo"), PREFIX_ANDNOT, token("bar"), token("baz"), EOF),
         equalTo(
             and(
-                not(phrase("bar")),
+                not(term("bar")),
                 or(
-                    phrase("foo"),
-                    phrase("baz")))));
+                    term("foo"),
+                    term("baz")))));
   }
 
   @Test
@@ -86,10 +87,8 @@ public class ParserTest {
         PREFIX_ANDNOT, token("foo"), token("bar"), token("baz"), EOF),
         equalTo(
             and(
-                not(phrase("foo")),
-                or(
-                    phrase("bar"),
-                    phrase("baz")))));
+                not(term("foo")),
+                terms("bar", "baz"))));
   }
 
   @Test
@@ -98,9 +97,9 @@ public class ParserTest {
         PREFIX_ANDNOT, token("foo"), token("bar"), PREFIX_AND, token("baz"), EOF),
         equalTo(
             and(
-                phrase("baz"),
-                not(phrase("foo")),
-                or(phrase("bar")))));
+                term("baz"),
+                not(term("foo")),
+                or(term("bar")))));
   }
 
   @Test
@@ -109,19 +108,19 @@ public class ParserTest {
         token("foo"), PREFIX_AND, PREFIX_ANDNOT, token("bar"), EOF),
         equalTo(
             and(
-                not(phrase("bar")),
-                or(phrase("foo")))));
+                not(term("bar")),
+                or(term("foo")))));
     assertThat(parse(
         token("foo"), PREFIX_ANDNOT, PREFIX_AND, token("bar"), token("baz"), EOF),
         equalTo(
             and(
-                not(phrase("bar")),
+                not(term("bar")),
                 or(
-                    phrase("foo"),
-                    phrase("baz")))));
+                    term("foo"),
+                    term("baz")))));
     assertThat("carelessly catenating prefix ANDNOTs equal out, but including excess PREFIX_ANDs has not effect",
         parse(PREFIX_AND, PREFIX_ANDNOT, PREFIX_AND, PREFIX_ANDNOT, PREFIX_ANDNOT, token("bar"), EOF),
-        equalTo(and(not(phrase("bar")))));
+        equalTo(and(not(term("bar")))));
   }
 
   @Test
@@ -130,18 +129,17 @@ public class ParserTest {
         token("foo"), INFIX_AND, token("bar"), token("baz"), EOF),
         equalTo(
             and(
-                phrase("foo"),
-                or(
-                    phrase("bar"),
-                    phrase("baz")))));
+                term("foo"),
+                terms("bar", "baz"))));
   }
 
   @Test
-  public void infix_or_has_no_effect_in_implicit_ors() {
+  public void infix_or_is_distinct_from_no_operator() {
     assertThat(parse(
         token("foo"), INFIX_OR, token("bar"), token("baz"), EOF),
         equalTo(
-            or(phrase("foo"), phrase("bar"), phrase("baz"))));
+            or(term("foo"),
+            terms("bar", "baz"))));
   }
 
   @Test
@@ -150,8 +148,8 @@ public class ParserTest {
         token("foo"), INFIX_OR, token("bar"), INFIX_AND, token("baz"), INFIX_OR, token("qux"), EOF),
         equalTo(
             and(
-                or(phrase("foo"), phrase("bar")),
-                or(phrase("baz"), phrase("qux")))));
+                or(term("foo"), term("bar")),
+                or(term("baz"), term("qux")))));
   }
 
   @Test

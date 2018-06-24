@@ -6,9 +6,9 @@ import io.vavr.control.Option;
 import java.util.Objects;
 
 public class Expression {
-  private final Either<SubExpression, String> value;
+  private final Either<SubExpression, Term> value;
 
-  Expression(Either<SubExpression, String> value) {
+  Expression(Either<SubExpression, Term> value) {
     this.value = value;
   }
 
@@ -20,15 +20,15 @@ public class Expression {
     return of(new SubExpression(operator, operands));
   }
 
-  public static Expression of(String phrase) {
-    return new Expression(Either.right(phrase));
+  public static Expression of(Term term) {
+    return new Expression(Either.right(term));
   }
 
   public static Expression noop() {
     return of(new SubExpression(Operator.NOOP, List.empty()));
   }
 
-  public boolean isPhrase() {
+  public boolean isTerm() {
     return value.isRight();
   }
 
@@ -53,46 +53,69 @@ public class Expression {
   }
 
   public Expression toAndArg() {
-    if (isPhrase()) {
+    if (isTerm()) {
       return of(Operator.OR, List.of(this));
     } else {
       return this;
     }
   }
 
-  public Option<List<String>> orPhrasesOnly() {
+  public Option<List<Term>> termsOnly() {
     if (isCompound()) {
-      return value.getLeft().orPhrasesOnly();
+      return value.getLeft().termsOnly();
     } else {
       return Option.of(List.of(value.get()));
     }
   }
 
-  public Expression or(Expression other) {
-    Option<List<String>> thisPhrasesOnly = this.orPhrasesOnly();
-    Option<List<String>> otherPhrasesOnly = other.orPhrasesOnly();
-    if (thisPhrasesOnly.isDefined() && otherPhrasesOnly.isDefined()) {
-      return Expression.of(Operator.OR,
-          thisPhrasesOnly.get()
-              .appendAll(otherPhrasesOnly.get())
+  public Expression appendTerm(Term term) {
+    if (isNoop()) {
+      return of(term);
+    }
+
+    final Option<List<Term>> thisTermsOnly = this.termsOnly();
+    if (thisTermsOnly.isDefined()) {
+      return Expression.of(Operator.TERMS,
+          thisTermsOnly.get()
+              .append(term)
               .map(Expression::of));
     }
-    return Expression.of(Operator.OR, List.of(this, other));
+    return Expression.of(Operator.OR, List.of(this, Expression.of(term)));
   }
 
   public Expression and(Expression other) {
-    if (isAnd()) {
+    if (isNoop()) {
+      return other;
+    } else if (isAnd()) {
       if (other.isAnd()) {
         return of(Operator.AND,
             value.getLeft().operands.appendAll(other.value.getLeft().operands));
       }
       return of(Operator.AND, value.getLeft().operands.append(other));
-    } else if (isPhrase() && other.isAnd()) {
+    } else if (isTerm() && other.isAnd()) {
       return of(Operator.AND, List.of(of(value.get())).appendAll(other.value.getLeft().operands));
-    } else if (isAnd() && other.isPhrase()) {
+    } else if (isAnd() && other.isTerm()) {
       return of(Operator.AND, value.getLeft().operands.append(of(other.value.get())));
     } else {
       return of(Operator.AND, List.of(this, other));
+    }
+  }
+
+  public Expression or(Expression other) {
+    if (isNoop()) {
+      return other;
+    } else if (isOr()) {
+      if (other.isOr()) {
+        return of(Operator.OR,
+            value.getLeft().operands.appendAll(other.value.getLeft().operands));
+      }
+      return of(Operator.OR, value.getLeft().operands.append(other));
+    } else if (isTerm() && other.isOr()) {
+      return of(Operator.OR, List.of(of(value.get())).appendAll(other.value.getLeft().operands));
+    } else if (isOr() && other.isTerm()) {
+      return of(Operator.OR, value.getLeft().operands.append(of(other.value.get())));
+    } else {
+      return of(Operator.OR, List.of(this, other));
     }
   }
 
@@ -127,7 +150,7 @@ public class Expression {
     if (isCompound()) {
       return value.getLeft().toString();
     } else {
-      return value.get();
+      return value.get().getValue();
     }
   }
 
@@ -153,19 +176,19 @@ public class Expression {
           .filter(expr -> !expr.isNoop());
     }
 
-    Option<List<String>> orPhrasesOnly() {
-      if (operator != Operator.OR) {
+    Option<List<Term>> termsOnly() {
+      if (operator != Operator.TERMS) {
         return Option.none();
       }
-      List<String> phrases = List.empty();
+      List<Term> terms = List.empty();
       for (Expression expr : operands) {
-        Option<List<String>> exprPhrases = expr.orPhrasesOnly();
-        if (!exprPhrases.isDefined()) {
+        Option<List<Term>> exprTerms = expr.termsOnly();
+        if (!exprTerms.isDefined()) {
           return Option.none();
         }
-        phrases = phrases.appendAll(exprPhrases.get());
+        terms = terms.appendAll(exprTerms.get());
       }
-      return Option.of(phrases);
+      return Option.of(terms);
     }
 
     @Override

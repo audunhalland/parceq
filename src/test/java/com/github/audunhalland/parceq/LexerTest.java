@@ -50,8 +50,8 @@ public class LexerTest {
             .asJava()));
   }
 
-  private static Token phrase(String phrase) {
-    return new Token(Token.Type.PHRASE, phrase);
+  private static Token word(String word) {
+    return new Token(Token.Type.WORD, word);
   }
 
   private static Token token(Type type, String value) {
@@ -67,33 +67,33 @@ public class LexerTest {
 
   @Test
   public void tokenizes_simple_terms() {
-    assertTokens("\n", phrase("\n"), EOF);
-    assertTokens(" \n ", phrase("\n"), EOF);
-    assertTokens("\n a", phrase("\n"), phrase("a"), EOF);
-    assertTokens("\n abc", phrase("\n"), phrase("abc"), EOF);
-    assertTokens("\n abc ", phrase("\n"), phrase("abc"), EOF);
+    assertTokens("\n", word("\n"), EOF);
+    assertTokens(" \n ", word("\n"), EOF);
+    assertTokens("\n a", word("\n"), word("a"), EOF);
+    assertTokens("\n abc", word("\n"), word("abc"), EOF);
+    assertTokens("\n abc ", word("\n"), word("abc"), EOF);
   }
 
   @Test
   public void escaping_regular_characters_has_no_effect() {
-    assertTokens("\\abc", phrase("\\abc"), EOF);
-    assertTokens("\\\\abc", phrase("\\\\abc"), EOF);
-    assertTokens("a\\bc", phrase("a\\bc"), EOF);
-    assertTokens("ab\\\\c", phrase("ab\\\\c"), EOF);
-    assertTokens("ab\\\\\\c", phrase("ab\\\\\\c"), EOF);
-    assertTokens("abc\\", phrase("abc\\"), EOF);
-    assertTokens("abc\\\\", phrase("abc\\\\"), EOF);
+    assertTokens("\\abc", word("\\abc"), EOF);
+    assertTokens("\\\\abc", word("\\\\abc"), EOF);
+    assertTokens("a\\bc", word("a\\bc"), EOF);
+    assertTokens("ab\\\\c", word("ab\\\\c"), EOF);
+    assertTokens("ab\\\\\\c", word("ab\\\\\\c"), EOF);
+    assertTokens("abc\\", word("abc\\"), EOF);
+    assertTokens("abc\\\\", word("abc\\\\"), EOF);
   }
 
   @Test
   public void tokenizes_parentheses() {
     assertTokens("(", LEFT_PAREN, EOF);
     assertTokens(")", RIGHT_PAREN, EOF);
-    assertTokens("a(", phrase("a"), LEFT_PAREN, EOF);
-    assertTokens("a))", phrase("a"), RIGHT_PAREN, RIGHT_PAREN, EOF);
-    assertTokens("a)(b", phrase("a"), RIGHT_PAREN, LEFT_PAREN, phrase("b"), EOF);
-    assertTokens("a ( ) b", phrase("a"), LEFT_PAREN, RIGHT_PAREN, phrase("b"), EOF);
-    assertTokens("a ( b) c", phrase("a"), LEFT_PAREN, phrase("b"), RIGHT_PAREN, phrase("c"), EOF);
+    assertTokens("a(", word("a"), LEFT_PAREN, EOF);
+    assertTokens("a))", word("a"), RIGHT_PAREN, RIGHT_PAREN, EOF);
+    assertTokens("a)(b", word("a"), RIGHT_PAREN, LEFT_PAREN, word("b"), EOF);
+    assertTokens("a ( ) b", word("a"), LEFT_PAREN, RIGHT_PAREN, word("b"), EOF);
+    assertTokens("a ( b) c", word("a"), LEFT_PAREN, word("b"), RIGHT_PAREN, word("c"), EOF);
   }
 
   @Test
@@ -101,10 +101,10 @@ public class LexerTest {
     assertTokens("+", PREFIX_AND, EOF);
     assertTokens("-", PREFIX_AND_NOT, EOF);
     assertTokens("+-", PREFIX_AND, PREFIX_AND_NOT, EOF);
-    assertTokens("+abc", PREFIX_AND, phrase("abc"), EOF);
-    assertTokens("+foo-bar", PREFIX_AND, phrase("foo-bar"), EOF);
-    assertTokens("+foo -bar", PREFIX_AND, phrase("foo"), PREFIX_AND_NOT, phrase("bar"), EOF);
-    assertTokens("+foo -+bar", PREFIX_AND, phrase("foo"), PREFIX_AND_NOT, PREFIX_AND, phrase("bar"), EOF);
+    assertTokens("+abc", PREFIX_AND, word("abc"), EOF);
+    assertTokens("+foo-bar", PREFIX_AND, word("foo-bar"), EOF);
+    assertTokens("+foo -bar", PREFIX_AND, word("foo"), PREFIX_AND_NOT, word("bar"), EOF);
+    assertTokens("+foo -+bar", PREFIX_AND, word("foo"), PREFIX_AND_NOT, PREFIX_AND, word("bar"), EOF);
   }
 
   @Test
@@ -113,47 +113,47 @@ public class LexerTest {
     assertTokens("&&", token(Token.Type.INFIX_AND, "&&"), EOF);
     assertTokens("OR", token(Token.Type.INFIX_OR, "OR"), EOF);
     assertTokens("||", token(Token.Type.INFIX_OR, "||"), EOF);
-    assertTokens("&&&", phrase("&&&"), EOF);
+    assertTokens("&&&", word("&&&"), EOF);
   }
 
   @Test
-  public void tokenizes_quoted_phrases() {
-    assertTokens("\"foo\"", phrase("foo"), EOF);
-    assertTokens("\"foo bar\"", phrase("foo bar"), EOF);
-    assertTokens("\"foo bar\"\"baz\"", phrase("foo bar"), phrase("baz"), EOF);
-    assertTokens("\"foo bar \" \"baz\"", phrase("foo bar "), phrase("baz"), EOF);
-    assertTokens("-\"foo bar\"+baz", PREFIX_AND_NOT, phrase("foo bar"), PREFIX_AND, phrase("baz"), EOF);
+  public void tokenizes_quoted_words() {
+    assertTokens("\"foo\"", word("foo"), EOF);
+    assertTokens("\"foo bar\"", word("foo bar"), EOF);
+    assertTokens("\"foo bar\"\"baz\"", word("foo bar"), word("baz"), EOF);
+    assertTokens("\"foo bar \" \"baz\"", word("foo bar "), word("baz"), EOF);
+    assertTokens("-\"foo bar\"+baz", PREFIX_AND_NOT, word("foo bar"), PREFIX_AND, word("baz"), EOF);
   }
 
   @Test
   public void quoting_rules_are_lenient() {
-    assertTokens("\"foo", phrase("foo"), EOF);
-    assertTokens("foo \"", phrase("foo"), EOF);
+    assertTokens("\"foo", word("foo"), EOF);
+    assertTokens("foo \"", word("foo"), EOF);
   }
 
   @Test
-  public void in_phrase_quotes_does_not_trigger_new_phrase() {
-    assertTokens("foo\"bar", phrase("foo\"bar"), EOF);
+  public void in_word_quotes_does_not_trigger_new_word() {
+    assertTokens("foo\"bar", word("foo\"bar"), EOF);
   }
 
   @Test
   public void escapes_quotes() {
-    assertTokens("\\\"foo bar", phrase("\"foo"), phrase("bar"), EOF);
-    assertTokens("\"foo\\\" bar", phrase("foo\" bar"), EOF);
-    assertTokens("foo \"bar\\baz", phrase("foo"), phrase("bar\\baz"), EOF);
-    assertTokens("foo \"bar\\\\baz", phrase("foo"), phrase("bar\\\\baz"), EOF);
+    assertTokens("\\\"foo bar", word("\"foo"), word("bar"), EOF);
+    assertTokens("\"foo\\\" bar", word("foo\" bar"), EOF);
+    assertTokens("foo \"bar\\baz", word("foo"), word("bar\\baz"), EOF);
+    assertTokens("foo \"bar\\\\baz", word("foo"), word("bar\\\\baz"), EOF);
   }
 
   @Test
   public void escapes_operators() {
-    assertTokens("\\-foo", phrase("-foo"), EOF);
-    assertTokens("\\-+foo", phrase("-+foo"), EOF);
-    assertTokens("foo \\(bar", phrase("foo"), phrase("(bar"), EOF);
+    assertTokens("\\-foo", word("-foo"), EOF);
+    assertTokens("\\-+foo", word("-+foo"), EOF);
+    assertTokens("foo \\(bar", word("foo"), word("(bar"), EOF);
   }
 
   @Test
   public void handles_utf8() {
-    assertTokens("føø bær", phrase("føø"), phrase("bær"), EOF);
+    assertTokens("føø bær", word("føø"), word("bær"), EOF);
   }
 
 }
