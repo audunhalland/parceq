@@ -165,7 +165,7 @@ public class Expression {
     } else {
       return "terms("
           + value.get()
-          .map(term -> term.getValue() + "@" + term.getId())
+          .map(term -> "\"" + term.getValue() + "\"@" + term.getId())
           .collect(Collectors.joining(", "))
           + ")";
     }

@@ -57,10 +57,15 @@ public class ParceQTest {
         .termShingles(3, " ");
     assertThat(result.getExpression(),
         equalTo(
-            or(
-                termsExpr(term(0, "a"), term(1, "b"), term(2, "c"), term(3, "d")),
-                termsExpr(term(4, "a b"), term(5, "b c"), term(6, "c d")),
-                termsExpr(term(7, "a b c"), term(8, "b c d")))));
-
+            termsExpr(
+                term(0, "a"),
+                term(4, "a b"),
+                term(5, "a b c"),
+                term(1, "b"),
+                term(6, "b c"),
+                term(7, "b c d"),
+                term(2, "c"),
+                term(8, "c d"),
+                term(3, "d"))));
   }
 }
