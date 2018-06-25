@@ -1,15 +1,14 @@
 package com.github.audunhalland.parceq;
 
 import io.vavr.collection.Stream;
-import io.vavr.control.Option;
 import io.vavr.control.Try;
 import java.io.Reader;
 
 public class ParceQ {
   private final TermAllocator termAllocator;
-  private final Option<Expression> expr;
+  private final Expression expr;
 
-  ParceQ(TermAllocator termAllocator, Option<Expression> expr) {
+  ParceQ(TermAllocator termAllocator, Expression expr) {
     this.termAllocator = termAllocator;
     this.expr = expr;
   }
@@ -24,7 +23,7 @@ public class ParceQ {
     });
   }
 
-  public Option<Expression> getExpression() {
+  public Expression getExpression() {
     return expr;
   }
 

@@ -31,9 +31,9 @@ public class Parser {
       return head;
     }
 
-    Option<Expression> parseExpression(int rightBindingPower) {
+    Expression parseExpression(int rightBindingPower) {
       if (tail.isEmpty()) {
-        return Option.none();
+        return Expression.noop();
       }
 
       Token current = this.head;
@@ -46,32 +46,32 @@ public class Parser {
         left = getLeftDenotation(left, current);
       }
 
-      return Option.of(left);
+      return left;
     }
 
-    Option<Expression> parsePrefixArg() {
+    Expression parsePrefixArg() {
       if (!tail.isEmpty()) {
         final Token token = head;
         next();
         switch (token.getType()) {
           case WORD:
-            return Option.of(getNullDenotation(token));
+            return getNullDenotation(token);
           case PREFIX_AND:
             return parsePrefixArg();
           case PREFIX_ANDNOT:
-            return parsePrefixArg()
-                .map(Expression::not);
+            return parsePrefixArg().not();
           case LEFT_PAREN:
             // FIXME:
             return null;
           default:
-            return Option.none();
+            return Expression.noop();
         }
       }
-      return Option.none();
+
+      return Expression.noop();
     }
 
-    Tuple2<Option<Expression>, Option<Expression>> parsePrefixArgAndRight(int rightBindingPower) {
+    Tuple2<Expression, Expression> parsePrefixArgAndRight(int rightBindingPower) {
       return new Tuple2<>(parsePrefixArg(), parseExpression(rightBindingPower));
     }
 
@@ -81,18 +81,10 @@ public class Parser {
           return Expression.of(termAllocator.createRootTerm(token.getValue()));
         case PREFIX_AND:
           return parsePrefixArgAndRight(Token.Type.PREFIX_AND.leftBindingPower)
-              .map2(optRight -> optRight.getOrElse(Expression.noop()))
-              .apply((optArg, right) ->
-                  optArg
-                      .map(arg -> arg.and(right.wrap()))
-                      .getOrElse(right));
+              .apply((arg, right) -> arg.and(right.wrap()));
         case PREFIX_ANDNOT:
           return parsePrefixArgAndRight(Token.Type.PREFIX_ANDNOT.leftBindingPower)
-              .map2(optRight -> optRight.getOrElse(Expression.noop()))
-              .apply((optArg, right) ->
-                  optArg
-                      .map(arg -> arg.not().and(right.wrap()))
-                      .getOrElse(right));
+              .apply((arg, right) -> arg.not().and(right.wrap()));
         default:
           return Expression.noop();
       }
@@ -103,38 +95,27 @@ public class Parser {
         case WORD:
           return left.appendTerm(termAllocator.createRootTerm(token.getValue()));
         case INFIX_AND:
-          return parseExpression(Type.INFIX_AND.leftBindingPower)
-              .map(left::and)
-              .getOrElse(left);
+          return left.and(parseExpression(Type.INFIX_AND.leftBindingPower));
         case INFIX_OR:
-          return parseExpression(Type.INFIX_OR.leftBindingPower)
-              .map(left::or)
-              .getOrElse(left);
+          return left.or(parseExpression(Type.INFIX_OR.leftBindingPower));
         case PREFIX_AND:
           return parsePrefixArgAndRight(Token.Type.PREFIX_AND.leftBindingPower)
-              .map2(optRight -> optRight.map(left::extend).getOrElse(left))
-              .apply((optArg, rest) ->
-                  optArg
-                      .map(arg -> arg.and(rest.wrap()))
-                      .getOrElse(rest));
+              .map2(left::extend)
+              .apply((arg, rest) -> arg.and(rest.wrap()));
         case PREFIX_ANDNOT:
           return parsePrefixArgAndRight(Token.Type.PREFIX_ANDNOT.leftBindingPower)
-              .map2(optRight -> optRight.map(left::extend).getOrElse(left))
-              .apply((optArg, rest) ->
-                  optArg
-                      .map(arg -> arg.not().and(rest.wrap()))
-                      .getOrElse(rest));
+              .map2(left::extend)
+              .apply((arg, rest) -> arg.not().and(rest.wrap()));
         default:
           return left;
       }
     }
   }
 
-  public Option<Expression> parse(Stream<Token> tokens) {
+  public Expression parse(Stream<Token> tokens) {
     final TopDownOperatorPrecedenceParser parser =
         new TopDownOperatorPrecedenceParser(termAllocator, tokens);
 
-    return parser.parseExpression(0)
-        .map(Expression::wrap);
+    return parser.parseExpression(0).wrap();
   }
 }

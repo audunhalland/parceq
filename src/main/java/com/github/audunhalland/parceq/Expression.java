@@ -4,6 +4,7 @@ import io.vavr.collection.List;
 import io.vavr.control.Either;
 import io.vavr.control.Option;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Expression {
@@ -126,7 +127,11 @@ public class Expression {
   }
 
   public Expression extend(Expression other) {
-    if (isCompound()) {
+    if (isNoop()) {
+      return other;
+    } else if (other.isNoop()) {
+      return this;
+    } else if (isCompound()) {
       switch (value.getLeft().operator) {
         case OR:
           return this.or(other);
@@ -140,6 +145,16 @@ public class Expression {
       return of(Operator.BOOST, List.of(this, other));
     } else {
       return or(other);
+    }
+  }
+
+  public Expression flatMapTerms(Function<List<Term>, Expression> mapper) {
+    if (isTerms()) {
+      return mapper.apply(value.get());
+    } else {
+      return of(value.getLeft().operator,
+          value.getLeft().operands
+              .map(expr -> expr.flatMapTerms(mapper)));
     }
   }
 

@@ -20,7 +20,7 @@ public class ParserTest {
   }
 
   private static Expression parse(Token ... tokens) {
-    return new Parser(new TermAllocator()).parse(Stream.of(tokens)).get();
+    return new Parser(new TermAllocator()).parse(Stream.of(tokens));
   }
 
   private static Term term(int id, String value) {
