@@ -1,8 +1,10 @@
 package com.github.audunhalland.parceq;
 
+import io.vavr.collection.Iterator;
 import io.vavr.collection.Stream;
 import io.vavr.control.Try;
 import java.io.Reader;
+import java.util.stream.Collectors;
 
 public class ParceQ {
   private final TermAllocator termAllocator;
@@ -28,6 +30,20 @@ public class ParceQ {
   }
 
   public ParceQ termShingles(int order, CharSequence separator) {
-    return null;
+    return new ParceQ(termAllocator,
+        expr.flatMapTerms(terms ->
+          Expression.of(Operator.OR,
+              Stream.concat(
+                  Stream.ofAll(terms)
+                      .map(Expression::of),
+                  Stream.range(2, order + 1)
+                      .map(n -> terms
+                          .sliding(n)
+                          .map(group -> termAllocator.createRootTerm(
+                              group.map(Term::getValue)
+                                  .collect(Collectors.joining(separator)))))
+                      .map(Iterator::toList)
+                      .map(Expression::of))
+                  .toList())));
   }
 }

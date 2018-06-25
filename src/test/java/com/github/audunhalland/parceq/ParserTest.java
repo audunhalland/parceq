@@ -1,10 +1,16 @@
 package com.github.audunhalland.parceq;
 
+import static com.github.audunhalland.parceq.ExpressionTestUtil.and;
+import static com.github.audunhalland.parceq.ExpressionTestUtil.boost;
+import static com.github.audunhalland.parceq.ExpressionTestUtil.not;
+import static com.github.audunhalland.parceq.ExpressionTestUtil.or;
+import static com.github.audunhalland.parceq.ExpressionTestUtil.term;
+import static com.github.audunhalland.parceq.ExpressionTestUtil.termExpr;
+import static com.github.audunhalland.parceq.ExpressionTestUtil.termsExpr;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
 import com.github.audunhalland.parceq.Token.Type;
-import io.vavr.collection.List;
 import io.vavr.collection.Stream;
 import org.junit.Test;
 
@@ -21,35 +27,6 @@ public class ParserTest {
 
   private static Expression parse(Token ... tokens) {
     return new Parser(new TermAllocator()).parse(Stream.of(tokens));
-  }
-
-  private static Term term(int id, String value) {
-    return new Term(id, value);
-  }
-
-  private static Expression termExpr(int id, String value) {
-    return Expression.of(new Term(id, value));
-  }
-
-  private static Expression termsExpr(Term ... terms) {
-    return List.of(terms)
-        .foldLeft(Expression.noop(), Expression::appendTerm);
-  }
-
-  private static Expression and(Expression ... expressions) {
-    return Expression.of(Operator.AND, List.of(expressions));
-  }
-
-  private static Expression or(Expression ... expressions) {
-    return Expression.of(Operator.OR, List.of(expressions));
-  }
-
-  private static Expression not(Expression expression) {
-    return Expression.of(Operator.NOT, List.of(expression));
-  }
-
-  private static Expression boost(Expression ... expressions) {
-    return Expression.of(Operator.BOOST, List.of(expressions));
   }
 
   @Test
